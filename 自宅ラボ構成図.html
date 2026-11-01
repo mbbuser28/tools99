@@ -1,0 +1,169 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>自宅ラボ構成図</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* layout: 上=トポロジー図（クリックで機器選択）、下=詳細パネル＋IP一覧＋死活取込 */
+:root{
+ --bg:#f3f5f4;--panel:#ffffff;--fg:#17201d;--muted:#5b6964;--line:#c9d2ce;
+ --accent:#0f7a6b;--ok:#1f8a4c;--ng:#c2402f;--plan:#8a6d1f;--chip:#e7ecea;
+ --sans:"IBM Plex Sans JP",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --bg:#121816;--panel:#1a2220;--fg:#e3ebe8;--muted:#93a39d;--line:#33403c;
+ --accent:#3fc1ab;--ok:#4cc27e;--ng:#ec6a57;--plan:#d6b45a;--chip:#25302d;color-scheme:dark}}
+:root[data-theme="dark"]{
+ --bg:#121816;--panel:#1a2220;--fg:#e3ebe8;--muted:#93a39d;--line:#33403c;
+ --accent:#3fc1ab;--ok:#4cc27e;--ng:#ec6a57;--plan:#d6b45a;--chip:#25302d;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);line-height:1.6}
+.wrap{max-width:1080px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:20px}
+h1{font-size:1.5rem;margin:0;text-wrap:balance}
+h2{font-size:1rem;margin:0 0 10px;letter-spacing:.04em}
+.sub{color:var(--muted);margin:2px 0 0;font-size:.9rem}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;min-width:0}
+.diagram{overflow-x:auto}
+svg{display:block;min-width:640px;width:100%;height:auto}
+svg text{font-family:var(--mono);fill:var(--fg)}
+.node rect{fill:var(--panel);stroke:var(--line);stroke-width:1.5}
+.node{cursor:pointer}
+.node:hover rect,.node:focus rect{stroke:var(--accent)}
+.node.sel rect{stroke:var(--accent);stroke-width:3}
+.node.plan rect{stroke-dasharray:6 4}
+.node:focus{outline:none}
+.link{stroke:var(--muted);stroke-width:2;fill:none}
+.link.plan{stroke-dasharray:6 5}
+.seg{font-size:11px;fill:var(--muted)}
+.link.wifi{stroke-dasharray:2 5;stroke-linecap:round}
+.port{font-size:10.5px;font-weight:600;fill:var(--accent);paint-order:stroke;stroke:var(--panel);stroke-width:4px}
+.dot.ok{fill:var(--ok)}.dot.ng{fill:var(--ng)}.dot.unk{fill:var(--line)}
+.grid2{display:grid;grid-template-columns:1.2fr 1fr;gap:20px}
+@media(max-width:760px){.grid2{grid-template-columns:1fr}}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:.78rem;letter-spacing:.04em}
+td.ip{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl{overflow-x:auto}
+.pill{display:inline-block;font-size:.72rem;padding:1px 8px;border-radius:99px;background:var(--chip);color:var(--muted);white-space:nowrap}
+.pill.ok{color:var(--ok)}.pill.ng{color:var(--ng)}.pill.plan{color:var(--plan)}
+pre{background:var(--chip);border-radius:4px;padding:10px 12px;overflow-x:auto;font-family:var(--mono);font-size:.82rem;margin:8px 0 0;white-space:pre}
+.cfg{position:relative}
+button{font:inherit;font-size:.82rem;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:4px 10px;cursor:pointer}
+button:hover{border-color:var(--accent);color:var(--accent)}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cbtn{position:absolute;top:6px;right:6px}
+.notes{margin:8px 0 0;padding-left:1.2em;color:var(--muted);font-size:.88rem}
+textarea{width:100%;box-sizing:border-box;min-height:90px;font-family:var(--mono);font-size:.82rem;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:8px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.muted{color:var(--muted);font-size:.85rem}
+</style>
+
+<div class="wrap">
+ <header>
+  <h1>自宅ラボ構成図</h1>
+  <p class="sub">RTX1200 / FortiGate 50E / ミニPC / レッツノート ・ 機器をクリックすると詳細と設定を表示</p>
+ </header>
+
+ <section class="box diagram" aria-label="構成図">
+  <svg id="svg" viewBox="0 0 760 470" role="img" aria-label="ネットワーク構成図"></svg>
+ </section>
+
+ <div class="grid2">
+  <section class="box" id="detail" aria-live="polite"></section>
+  <section class="box">
+   <h2>死活確認の取り込み</h2>
+   <p class="muted">ミニPCのPowerShellで次を実行し、結果をそのまま下に貼ると、図のランプ（緑／赤）に反映されます。</p>
+   <div class="cfg"><pre id="pscmd"></pre><button class="cbtn" data-copy="pscmd">コピー</button></div>
+   <label for="paste" class="muted" style="display:block;margin-top:10px">結果を貼り付け</label>
+   <textarea id="paste" placeholder="192.168.0.1,True&#10;192.168.1.60,False"></textarea>
+   <div class="row"><button id="apply">反映する</button><button id="clear">リセット</button><span id="stamp" class="muted"></span></div>
+  </section>
+ </div>
+
+ <section class="box">
+  <h2>IPアドレス一覧</h2>
+  <div class="tbl"><table><thead><tr><th>状態</th><th>機器</th><th>インターフェース</th><th>アドレス</th><th>備考</th></tr></thead><tbody id="tbody"></tbody></table></div>
+ </section>
+</div>
+
+<script>
+const D={
+ router:{name:"自宅ルーター",role:"インターネットの出口",x:300,y:20,ifs:[["LAN","192.168.0.1/24","DHCPで各機器に配布"]],
+  notes:["ISP回線につながる家庭用ルーター","ここから先がプロバイダ網（10.255.x.x）"]},
+ fg:{name:"FortiGate 50E",role:"FortiOS v5.4.6（サポート終了）",x:300,y:140,ifs:[["wan1","192.168.0.160/24","管理アクセスはPINGのみ"],["lan（port1,4）","192.168.1.99/24","port1: RTX / port4: ミニPC"],["lan3","192.168.2.99/24","未使用"],["snmp（port5）","なし","別スイッチに分離・IPなし"]],
+  cfg:`# 確認用CLI
+get system interface physical
+get router info routing-table all
+execute ping 192.168.0.1`,
+  notes:["WAN側の管理画面（HTTPS/SSH）は開けない","lan5は「snmp」スイッチなのでRTXはport1へ"]},
+ rtx:{name:"RTX1200",role:"Rev.10.01.78",x:540,y:265,ifs:[["LAN2","192.168.1.60/24","GW: 192.168.1.99"],["LAN1","192.168.100.1/24","DHCPサーバー・NAT内側"]],
+  cfg:`ip lan2 address 192.168.1.60/24
+ip route default gateway 192.168.1.99
+nat descriptor type 1 masquerade
+nat descriptor address outer 1 primary
+ip lan2 nat descriptor 1
+dns server 8.8.8.8
+save`,
+  notes:["設定は administrator で # にしてから","outer 1 primary が無いとNATが動かない（初期値は ipcp）","バックアップ: copy config 0 usb1:/config.txt"]},
+ mini:{name:"ミニPC",role:"メインPC（Windows）",x:120,y:390,ifs:[["Wi-Fi","192.168.0.32/24","普段使い"],["イーサネット2","192.168.1.100/24","FortiGate port4 直結"],["イーサネット3","192.168.100.2/24","RTX LAN1 port1（DHCP）"],["VirtualBox","192.168.56.1/24","ホストオンリー"],["Hyper-V","172.18.240.1/20","Default Switch"]],
+  cfg:`ipconfig
+route print -4
+tracert -d -w 500 8.8.8.8`,
+  notes:["デフォルトルートが複数あるのでメトリックに注意","Windowsは tracert、RTXは traceroute"]},
+ lets:{name:"レッツノート",role:"検証用（予定）",plan:true,x:540,y:390,ifs:[["有線","192.168.100.x（DHCP）","RTX LAN1 の別ポートへ"]],
+  cfg:`# RTX LAN1 の空きポートにつないで
+ipconfig
+ping 192.168.100.1
+ping 192.168.100.2`,
+  notes:["次の練習：LAN1をVLANで分割してミニPCと別セグメントにする"]},
+ tab:{name:"Androidタブレット",role:"あまり使っていない端末",x:570,y:20,ifs:[["Wi-Fi","192.168.0.x（DHCP）","IP未確認"]],
+  notes:["IPの確認：設定 → デバイス情報（端末情報）→ ステータス","またはルーターの管理画面の接続端末一覧で確認"]},
+ surf:{name:"Surface 2",role:"Windows RT 8.1（サポート終了）",x:570,y:110,ifs:[["Wi-Fi","192.168.0.x（DHCP）","IP未確認"]],
+  cfg:`ipconfig`,
+  notes:["コマンドプロンプトで ipconfig を実行してIPを確認","更新が止まった端末なので、普段使いや重要なログインには使わない"]}
+};
+const LINKS=[["router","fg","192.168.0.0/24",0,"LAN","wan1"],["fg","rtx","192.168.1.0/24",0,"port1","LAN2"],["fg","mini","192.168.1.0/24",0,"port4","イーサネット2"],["rtx","mini","192.168.100.0/24",0,"LAN1.1","イーサネット3"],["rtx","lets","192.168.100.0/24",1,"LAN1.x","有線"]];
+const W=170,H=58,ns="http://www.w3.org/2000/svg";
+const ips=[];Object.values(D).forEach(d=>d.ifs.forEach(i=>{const ip=i[1].split("/")[0];if(/^\d+\.\d+\.\d+\.\d+$/.test(ip))ips.push(ip)}));
+let ST={};try{ST=JSON.parse(localStorage.getItem("st")||"{}")}catch(e){}
+let sel="rtx";
+const el=(t,a,p)=>{const e=document.createElementNS(ns,t);for(const k in a)e.setAttribute(k,a[k]);p&&p.appendChild(e);return e};
+const c=k=>[D[k].x+W/2,D[k].y+H/2];
+function stOf(k){const v=D[k].ifs.map(i=>ST[i[1].split("/")[0]]).filter(x=>x!==undefined);if(!v.length)return"unk";return v.some(x=>x)?"ok":"ng"}
+function draw(){
+ const s=document.getElementById("svg");s.innerHTML="";
+ const edge=(k,o)=>{const[x,y]=c(k),[ox,oy]=c(o),dx=ox-x,dy=oy-y,sc=Math.min(W/2/Math.abs(dx||1e-9),H/2/Math.abs(dy||1e-9)),L=Math.hypot(dx,dy);return[x+dx*sc+dx/L*16,y+dy*sc+dy/L*16]};
+ const port=(x,y,txt)=>{const t=el("text",{x,y:y+4,class:"port","text-anchor":"middle"},s);t.textContent=txt};
+ /* Wi-Fi：FortiGateと重ならないよう左側を回す */
+ el("path",{d:"M300,49 H50 V419 H120",class:"link wifi"},s);
+ const wt=el("text",{x:58,y:240,class:"seg"},s);wt.textContent="Wi-Fi 192.168.0.0/24";
+ port(270,43,"無線");port(92,413,"Wi-Fi");
+ el("path",{d:"M470,49 H570",class:"link wifi"},s);
+ el("path",{d:"M520,49 V139 H570",class:"link wifi"},s);
+ port(520,40,"Wi-Fi");
+ LINKS.forEach(([a,b,lab,p,pa,pb])=>{const[x1,y1]=c(a),[x2,y2]=c(b);el("line",{x1,y1,x2,y2,class:"link"+(p?" plan":"")},s);
+  const t=el("text",{x:(x1+x2)/2+8,y:(y1+y2)/2-6,class:"seg"},s);t.textContent=lab;
+  port(...edge(a,b),pa);port(...edge(b,a),pb)});
+ for(const k in D){const d=D[k];const g=el("g",{class:"node"+(k===sel?" sel":"")+(d.plan?" plan":""),tabindex:0,role:"button","aria-label":d.name},s);
+  el("rect",{x:d.x,y:d.y,width:W,height:H,rx:5},g);
+  const t=el("text",{x:d.x+14,y:d.y+24,"font-size":14,"font-weight":600},g);t.textContent=d.name;
+  const t2=el("text",{x:d.x+14,y:d.y+44,"font-size":11,class:"seg"},g);t2.textContent=d.ifs[0][1];
+  el("circle",{cx:d.x+W-14,cy:d.y+14,r:6,class:"dot "+(d.plan?"unk":stOf(k))},g);
+  g.onclick=()=>{sel=k;render()};g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();sel=k;render()}}}
+}
+function pill(ip,plan){if(plan)return'<span class="pill plan">予定</span>';const v=ST[ip];return v===undefined?'<span class="pill">未確認</span>':v?'<span class="pill ok">応答あり</span>':'<span class="pill ng">応答なし</span>'}
+function detail(){const d=D[sel];let h=`<h2>${d.name}</h2><p class="muted" style="margin:0 0 8px">${d.role}</p><div class="tbl"><table><tbody>`;
+ d.ifs.forEach(i=>h+=`<tr><td>${i[0]}</td><td class="ip">${i[1]}</td><td class="muted">${i[2]}</td></tr>`);h+="</tbody></table></div>";
+ if(d.cfg)h+=`<div class="cfg"><pre id="cfg">${d.cfg.replace(/</g,"&lt;")}</pre><button class="cbtn" data-copy="cfg">コピー</button></div>`;
+ h+=`<ul class="notes">${d.notes.map(n=>`<li>${n}</li>`).join("")}</ul>`;document.getElementById("detail").innerHTML=h}
+function table(){let h="";for(const k in D){const d=D[k];d.ifs.forEach(i=>{const ip=i[1].split("/")[0];h+=`<tr><td>${pill(ip,d.plan)}</td><td>${d.name}</td><td>${i[0]}</td><td class="ip">${i[1]}</td><td class="muted">${i[2]}</td></tr>`})}document.getElementById("tbody").innerHTML=h}
+function render(){draw();detail();table();let t="";try{t=localStorage.getItem("stamp")||""}catch(e){}document.getElementById("stamp").textContent=t?"最終反映: "+t:""}
+document.getElementById("pscmd").textContent=`$ips='${ips.filter(i=>!i.startsWith("172.")&&i!=="192.168.56.1").join("','")}'\n$ips | % { "$_," + (Test-Connection $_ -Count 1 -Quiet) }`;
+document.getElementById("apply").onclick=()=>{document.getElementById("paste").value.split(/\r?\n/).forEach(l=>{const m=l.trim().match(/^(\d+\.\d+\.\d+\.\d+)\s*,\s*(True|False)/i);if(m)ST[m[1]]=/true/i.test(m[2])});
+ const t=new Date().toLocaleString("ja-JP");try{localStorage.setItem("st",JSON.stringify(ST));localStorage.setItem("stamp",t)}catch(e){}render()};
+document.getElementById("clear").onclick=()=>{ST={};try{localStorage.removeItem("st");localStorage.removeItem("stamp")}catch(e){}render()};
+document.addEventListener("click",e=>{const b=e.target.closest("[data-copy]");if(!b)return;const p=document.getElementById(b.dataset.copy);
+ navigator.clipboard.writeText(p.textContent).then(()=>{b.textContent="コピー済み";setTimeout(()=>b.textContent="コピー",1500)}).catch(()=>{const r=document.createRange();r.selectNodeContents(p);const s=getSelection();s.removeAllRanges();s.addRange(r)})});
+render();
+</script>
+
+</body></html>

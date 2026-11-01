@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NISA積立シミュレーター</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* 左に入力・右に結果の2カラム、狭幅で1カラム */
+:root{--bg:#f5f7f6;--panel:#fff;--fg:#1d2723;--mute:#5f6e68;--line:#d9e1dd;--accent:#0f7a5c;
+--c1:#0f7a5c;--c2:#2f6fd6;--c3:#c2771b;--c4:#b0437a;--c5:#6b5bc4;
+--f:"Zen Kaku Gothic New",system-ui,sans-serif;--m:"IBM Plex Mono",ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121816;--panel:#1b2320;--fg:#e4ece8;--mute:#94a59e;--line:#2c3833;--accent:#3cc497;--c1:#3cc497;--c2:#6fa0f0;--c3:#e3a24c;--c4:#e07aaf;--c5:#a597ef;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#121816;--panel:#1b2320;--fg:#e4ece8;--mute:#94a59e;--line:#2c3833;--accent:#3cc497;--c1:#3cc497;--c2:#6fa0f0;--c3:#e3a24c;--c4:#e07aaf;--c5:#a597ef;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--f);font-size:15px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px}
+.wrap{max-width:1100px;margin:0 auto;display:grid;gap:20px}
+h1{font-size:1.6rem;margin:0;text-wrap:balance}
+.sub{color:var(--mute);margin:4px 0 0;font-size:.9rem}
+.grid{display:grid;grid-template-columns:300px 1fr;gap:20px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;min-width:0}
+label{display:grid;gap:2px;font-size:.8rem;color:var(--mute);margin-bottom:8px}
+.grid>.panel:first-child{padding:12px 14px;position:sticky;top:8px;align-self:start;max-height:calc(100vh - 16px);overflow-y:auto}
+.grid>.panel:first-child .big{font-size:.8rem;color:var(--mute);font-family:var(--f)}
+.grid>.panel:first-child .note{margin:4px 0 8px}
+.grid>.panel:first-child input[type=number]{padding:3px 6px}
+.seg{margin-bottom:10px!important}
+.seg button{padding:6px!important}
+@media(max-width:760px){.grid>.panel:first-child{position:static;max-height:none}}
+.row{display:flex;gap:10px;align-items:center}
+input[type=range]{flex:1;accent-color:var(--accent)}
+input[type=number]{width:90px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font-family:var(--m);text-align:right}
+.big{font-family:var(--m);font-size:1.1rem;color:var(--fg)}
+.note{font-size:.78rem;color:var(--mute);line-height:1.6}
+.warn{color:var(--c3)}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+@media(max-width:500px){.kpis{grid-template-columns:1fr}}
+.kpi .l{font-size:.75rem;color:var(--mute);letter-spacing:.04em}
+.kpi .v{font-family:var(--m);font-size:1.35rem;font-variant-numeric:tabular-nums}
+canvas{width:100%;height:300px;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.8rem;margin-top:8px}
+.legend span::before{content:"";display:inline-block;width:12px;height:3px;margin-right:5px;vertical-align:middle;background:var(--c)}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.85rem;min-width:640px}
+th,td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
+th{color:var(--mute);font-weight:400;font-size:.75rem}
+td:first-child,th:first-child{text-align:left}
+td.n{font-family:var(--m)}
+td input{width:62px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:var(--c)}
+.pos{color:var(--accent)}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:18px}
+.seg button{flex:1;padding:9px 6px;border:0;background:transparent;color:var(--mute);font:inherit;font-size:.85rem;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--panel);font-weight:700}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+</style>
+
+<div class="wrap">
+<header><h1>NISA積立シミュレーター</h1><p class="sub">新NISA（つみたて投資枠＋成長投資枠）で毎月積み立てた場合の将来額を、代表的なインデックスファンドで並べて比べます。</p></header>
+<div class="grid">
+<section class="panel">
+<div class="seg" role="group" aria-label="パターン"><button id="p0" type="button" aria-pressed="false">積立のみ</button><button id="p1" type="button" aria-pressed="true">積立＋一括投資</button></div>
+<label for="m">毎月の積立額<div class="row"><input id="mr" type="range" min="1000" max="300000" step="1000" value="30000"><input id="m" type="number" min="1000" max="300000" step="1000" value="30000"></div><span class="big" id="mTxt"></span></label>
+<label for="y">積立年数<div class="row"><input id="yr" type="range" min="1" max="50" value="20"><input id="y" type="number" min="1" max="50" value="20"></div></label>
+<label for="h">積立後もそのまま保有する年数<div class="row"><input id="hr" type="range" min="0" max="30" value="0"><input id="h" type="number" min="0" max="30" value="0"></div></label>
+<div id="lumpBox"><label for="L">1回目の一括投資額（円）<div class="row"><input id="Lr" type="range" min="0" max="18000000" step="100000" value="1000000"><input id="L" type="number" min="0" max="18000000" step="100000" value="1000000" style="width:110px"></div><span class="big" id="LTxt"></span></label>
+<label for="k">1回目のタイミング（何年目の初め）<div class="row"><input id="kr" type="range" min="1" max="50" value="1"><input id="k" type="number" min="1" max="50" value="1"></div></label>
+<label for="L2">2回目の一括投資額（円）<div class="row"><input id="L2r" type="range" min="0" max="18000000" step="100000" value="2000000"><input id="L2" type="number" min="0" max="18000000" step="100000" value="2000000" style="width:110px"></div><span class="big" id="L2Txt"></span></label>
+<label for="k2">2回目のタイミング（何年目の初め）<div class="row"><input id="k2r" type="range" min="1" max="50" value="10"><input id="k2" type="number" min="1" max="50" value="10"></div></label>
+<p class="note">金額を0にするとその回は投資しません。年間360万円の枠を超える分は翌年以降に分けて投入する計算です。</p></div>
+<div style="border-top:1px solid var(--line);padding-top:8px;margin-bottom:4px;font-weight:700;font-size:.85rem">老後の取り崩し</div>
+<label for="w">毎月の取り崩し額（円、0でなし）<div class="row"><input id="wr_" type="range" min="0" max="500000" step="10000" value="100000"><input id="w" type="number" min="0" max="500000" step="10000" value="100000"></div></label>
+<label for="ws">取り崩しを始めるのは何年目から<div class="row"><input id="wsr" type="range" min="1" max="60" value="26"><input id="ws" type="number" min="1" max="60" value="26"></div></label>
+<label for="wd">取り崩す年数<div class="row"><input id="wdr" type="range" min="1" max="40" value="25"><input id="wd" type="number" min="1" max="40" value="25"></div></label>
+<p class="note" id="cap"></p>
+</section>
+<section class="panel">
+<div class="kpis">
+<div class="kpi"><div class="l">投資元本</div><div class="v" id="kP"></div></div>
+<div class="kpi"><div class="l">選択ファンドの評価額</div><div class="v pos" id="kV"></div></div>
+<div class="kpi"><div class="l">NISAによる節税額</div><div class="v" id="kT"></div></div>
+</div>
+<p class="note" id="ln" style="margin:0 0 12px"></p>
+<p class="note" id="wr" style="margin:0 0 12px;font-size:.85rem;color:var(--fg)"></p>
+<canvas id="cv"></canvas>
+<div class="legend" id="lg"></div>
+</section>
+</div>
+<section class="panel tbl">
+<table><thead><tr><th>ファンド（例）</th><th>想定利回り%</th><th>信託報酬%</th><th id="thV">評価額(NISA)</th><th id="thB">積立のみなら</th><th>運用益</th><th>課税口座なら</th><th>節税額</th><th id="thW">取り崩し後</th></tr></thead><tbody id="tb"></tbody></table>
+<p class="note">表の「想定利回り」は自由に書き換えられます。初期値は過去の長期実績を参考にした控えめな仮定で、将来を保証するものではありません。信託報酬は利回りから差し引いて計算します。課税口座は運用益に20.315%課税した場合です。</p>
+<p class="note">行をクリックすると上の数値がそのファンドに切り替わります。特定の商品を勧めるものではなく、私はファイナンシャルアドバイザーではありません。購入前は各運用会社の目論見書をご確認ください。</p>
+</section>
+</div>
+
+<script>
+const F=[
+{n:"全世界株式（オール・カントリー）",r:7,f:0.05775,c:"--c1"},
+{n:"米国株式（S&P500）",r:8,f:0.0814,c:"--c2"},
+{n:"先進国株式",r:7,f:0.09889,c:"--c3"},
+{n:"国内株式（TOPIX）",r:5,f:0.143,c:"--c4"},
+{n:"バランス（8資産均等型）",r:4,f:0.143,c:"--c5"}];
+let sel=0,mode=1,WD={W:0,S:1,D:0};const $=i=>document.getElementById(i);
+const yen=v=>v>=1e8?(v/1e8).toFixed(2)+"億円":v<1e6?(v/1e4).toFixed(1)+"万円":Math.round(v/1e4).toLocaleString()+"万円";
+const css=k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+function sim(m,y,h,r,Ls=[],Wd=WD){const S0=Wd.W?(Wd.S-1)*12:1e9,E0=S0+Wd.D*12;let sv=null,wd=0,dep=0;const mr=Math.pow(1+r/100,1/12)-1,cap=18e6;let v=0,p=0,s=[0],ps=[0],pend=0;
+for(let i=1;i<=(y+h)*12;i++){if((i-1)%12==0){const yr=(i-1)/12+1;Ls.forEach(o=>{if(o.k==yr)pend+=o.L});if(pend>0){const a=Math.min(pend,36e5-(yr<=y?m*12:0),cap-p);if(a>0){v+=a;p+=a;pend-=a}}}if(i==S0+1)sv=v;v*=1+mr;if(i>S0&&i<=E0&&v>0){const w=Math.min(Wd.W,v);v-=w;wd+=w;if(v<=0&&!dep)dep=Math.ceil(i/12)}if(i<=y*12&&i<=S0){const a=Math.min(m,cap-p);if(a>0){v+=a;p+=a}}if(i%12==0){s.push(v);ps.push(p)}}return{v,p,s,ps,sv,wd,dep}}
+function link(a,b){$(a).oninput=()=>{$(b).value=$(a).value;run()};$(b).oninput=()=>{$(a).value=$(b).value;run()}}
+[0,1].forEach(i=>$("p"+i).onclick=()=>{mode=i;run()});link("mr","m");link("yr","y");link("hr","h");link("Lr","L");link("kr","k");link("L2r","L2");link("k2r","k2");link("wr_","w");link("wsr","ws");link("wdr","wd");
+function run(){$("p0").setAttribute("aria-pressed",mode==0);$("p1").setAttribute("aria-pressed",mode==1);$("lumpBox").hidden=!mode;$("thB").hidden=!mode;$("thV").textContent=mode?"積立＋一括":"評価額(NISA)";
+const m=+$("m").value||0,y=+$("y").value||1,h=+$("h").value||0,L=mode?(+$("L").value||0):0,k=Math.min(+$("k").value||1,y+h),L2=mode?(+$("L2").value||0):0,k2=Math.min(+$("k2").value||1,y+h),LT=L+L2;
+WD={W:+$("w").value||0,S:Math.max(+$("ws").value||1,1),D:+$("wd").value||0};const N=WD.W?Math.max(y+h,WD.S-1+WD.D):y+h;if(WD.W)$("thV").textContent+="（取崩し開始時）";$("thW").hidden=!WD.W;
+$("LTxt").textContent=L?`${yen(L)}を${k}年目に追加`:"なし";$("L2Txt").textContent=L2?`${yen(L2)}を${k2}年目に追加`:"なし";
+$("mTxt").textContent=`年 ${(m*12/1e4).toLocaleString()}万円`;
+const tot=m*12*y+LT;$("cap").innerHTML=m>3e5?'<span class="warn">月30万円（年360万円）が新NISAの上限です。</span>':tot>18e6?`<span class="warn">生涯投資枠1,800万円に達した時点で積立が止まる計算です（約${(18e6/m/12).toFixed(1)}年目）。</span>`:`生涯投資枠1,800万円のうち ${yen(tot)} を使います。`;
+const R=F.map(o=>({...o,...sim(m,y,N-y,o.r-o.f,[{L,k},{L:L2,k:k2}]),b:sim(m,y,N-y,o.r-o.f)}));R.forEach(o=>{o.V=o.sv??o.v;o.b.V=o.b.sv??o.b.v});const base=R[sel].b;
+$("tb").innerHTML=R.map((o,i)=>{const g=o.V-o.p,t=Math.max(g,0)*0.20315;return`<tr data-i="${i}" style="cursor:pointer;${i==sel?'background:var(--bg)':''}"><td><span class="dot" style="--c:var(${o.c})"></span>${o.n}</td><td><input type="number" step="0.5" value="${o.r}" data-r="${i}" aria-label="${o.n}の想定利回り"></td><td class="n">${o.f}</td><td class="n">${yen(o.V)}</td>${mode?`<td class="n">${yen(o.b.V)}</td>`:""}<td class="n pos">+${yen(g)}</td><td class="n">${yen(o.V-t)}</td><td class="n">${yen(t)}</td>${WD.W?`<td class="n${o.dep?' warn':''}">${o.dep?o.dep+"年目に枯渇":"残り"+yen(o.v)}</td>`:""}</tr>`}).join("");
+document.querySelectorAll("[data-r]").forEach(e=>{e.onchange=()=>{F[+e.dataset.r].r=+e.value;run()};e.onclick=ev=>ev.stopPropagation()});
+document.querySelectorAll("tr[data-i]").forEach(e=>e.onclick=()=>{sel=+e.dataset.i;run()});
+const s=R[sel];$("kP").textContent=yen(s.p);$("kV").textContent=yen(s.V);$("kT").textContent=yen(Math.max(s.V-s.p,0)*0.20315);$("ln").textContent=LT?`一括追加なしの場合は ${yen(base.V)}。一括追加で評価額が ${yen(s.V-base.V)} 増えます（うち元本 ${yen(s.p-base.p)}）。`:(mode?"":"毎月の積立だけで計算しています。一括投資も含めるには「積立＋一括投資」を選んでください。");
+const smr=Math.pow(1+(F[sel].r-F[sel].f)/100,1/12)-1;$("wr").innerHTML=WD.W?`<b>${WD.S}年目から月${yen(WD.W)}を${WD.D}年間取り崩し</b>：開始時の残高 ${yen(s.V)}、受け取り総額 ${yen(s.wd)}。`+(s.dep?`<span class="warn">${s.dep}年目で資産が尽きます。</span>`:`${WD.S-1+WD.D}年目の終わりに ${yen(s.v)} 残ります。`)+`残高を減らさずに取り崩せる目安は月 ${yen(s.V*smr)}（運用益の範囲内）です。`+(WD.S<=y?`<span class="warn">取り崩しを始めた時点で積立は止まる計算です。</span>`:""):"";
+$("lg").innerHTML=R.map(o=>`<span style="--c:var(${o.c})">${o.n}</span>`).join("")+`<span style="--c:var(--mute)">元本</span>`+(LT?`<span style="--c:var(${s.c});opacity:.6">積立のみ（選択中ファンド・点線）</span>`:"");
+draw(R,N,LT,[[L,k],[L2,k2],[WD.W,WD.S],[1,Math.min(y,WD.W?WD.S-1:y)+1]])}
+function draw(R,N,LS,KS){const c=$("cv"),d=devicePixelRatio||1,W=c.clientWidth,H=c.clientHeight;c.width=W*d;c.height=H*d;const x=c.getContext("2d");x.scale(d,d);
+const L=56,B=24,T=10,Rr=10,max=Math.max(...R.map(o=>Math.max(...o.s)))*1.05||1;
+const step=[1e5,5e5,1e6,5e6,1e7,2e7,5e7,1e8,2e8,5e8].find(s=>max/s<=6)||1e9;
+const X=i=>L+(W-L-Rr)*i/N,Y=v=>H-B-(H-B-T)*v/max;
+x.font="11px "+css("--m");x.fillStyle=css("--mute");x.strokeStyle=css("--line");x.lineWidth=1;
+for(let v=0;v<=max;v+=step){x.beginPath();x.moveTo(L,Y(v));x.lineTo(W-Rr,Y(v));x.stroke();x.textAlign="right";x.fillText(v>=1e8?v/1e8+"億":v/1e4+"万",L-6,Y(v)+4)}
+x.textAlign="center";const ys=Math.ceil(N/8);for(let i=0;i<=N;i+=ys)x.fillText(i+"年",X(i),H-6);
+(KS||[]).forEach(([a,kk],j)=>{if(!a)return;const px=X(kk-1);x.strokeStyle=css("--accent");x.lineWidth=1;x.setLineDash([2,3]);x.beginPath();x.moveTo(px,T);x.lineTo(px,H-B);x.stroke();x.setLineDash([]);x.fillStyle=css("--accent");x.textAlign=px>W-80?"right":"left";x.fillText(["一括1","一括2","取崩し開始","積立終了"][j],px+(px>W-80?-4:4),T+12+j*14)});
+const line=(arr,col,w,dash)=>{x.strokeStyle=col;x.lineWidth=w;x.setLineDash(dash||[]);x.beginPath();arr.forEach((v,i)=>i?x.lineTo(X(i),Y(v)):x.moveTo(X(i),Y(v)));x.stroke();x.setLineDash([])};
+line(R[0].ps,css("--mute"),1.5,[4,4]);
+R.forEach((o,i)=>i!=sel&&line(o.s,css(o.c),1.5));if(LS)line(R[sel].b.s,css(R[sel].c),2,[7,5]);line(R[sel].s,css(R[sel].c),3);
+const e=R[sel];x.fillStyle=css(e.c);x.beginPath();x.arc(X(N),Y(e.v),4,0,7);x.fill()}
+addEventListener("resize",run);matchMedia("(prefers-color-scheme:dark)").addEventListener("change",run);run();
+</script>
+
+</html>
